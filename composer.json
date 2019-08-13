@@ -1,0 +1,24 @@
+{
+    "name": "anandpilania/f3-jwt-middleware",
+    "description": "JWT Auth Middleware for FatFreeFramework.",
+	"keywords": ["f3", "fatfree", "fatfreeframework", "anandpilania", "f3-jwt-middleware", "f3-jwt-auth"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Anand Pilania",
+            "email": "pilaniaanand@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+		"bcosca/fatfree-core": "^3.6",
+		"firebase/php-jwt": "^5.0"
+	},
+	"autoload": {
+		"files": ["JWTMiddleware.php"]
+	},
+	"suggest": {
+		"anandpilania/f3-validator": "Validator package for FatFreeFramework.",
+		"anandpilania/f3-token-middleware": "Token Auth Middleware for FatFreeFramework."
+	}
+}
