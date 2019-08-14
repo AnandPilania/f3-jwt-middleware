@@ -10,30 +10,29 @@ class JWTMiddleware extends Prefab {
 	}
 	
 	public function protect($pattern, $handler) {
-		$event = 'justRun';
 		$bak = $this->app->ROUTES;
 		$this->app->ROUTES=array();
 		$this->app->route($pattern, $handler);
-		$this->routes[$event] = (isset($this->routes[$event])) ? $this->app->extend('ROUTES',$this->routes[$event]) : $this->app->ROUTES;
+		$this->routes = (isset($this->routes)) ? $this->app->extend('ROUTES',$this->routes) : $this->app->ROUTES;
 		$this->app->ROUTES=$bak;
 	}
 	
-	public function run($event='justRun') {
-		if (!isset($this->routes[$event]))
+	public function run() {
+		if (!isset($this->routes))
 			return;
 		$paths=[];
-		foreach ($keys=array_keys($this->routes[$event]) as $key) {
+		foreach ($keys=array_keys($this->routes) as $key) {
 			$path=preg_replace('/@\w+/','*@',$key);
 			if (substr($path,-1)!='*')
 				$path.='+';
 			$paths[]=$path;
 		}
-		$vals=array_values($this->routes[$event]);
+		$vals=array_values($this->routes);
 		array_multisort($paths,SORT_DESC,$keys,$vals);
-		$this->routes[$event]=array_combine($keys,$vals);
+		$this->routes=array_combine($keys,$vals);
 		// Convert to BASE-relative URL
 		$req=urldecode($this->app['PATH']);
-		foreach ($this->routes[$event] as $pattern=>$routes) {
+		foreach ($this->routes as $pattern=>$routes) {
 			if (!$args=$this->app->mask($pattern,$req))
 				continue;
 			ksort($args);
@@ -76,15 +75,26 @@ class JWTMiddleware extends Prefab {
 	}
 	
 	protected function validate($handler, $args, $alias) {
-		$type = $this->app->get('JWT.TYPE');
+		$jwtHeader = null;
+		$type = strtoupper($this->app->get('JWT.TYPE'));
 		
 		if($type === 'HEADER') {
-			$jwtToken = $this->app->get('HEADERS.' . $this->app->get('JWT.KEY'));
+			$jwtHeader = $this->app->get('HEADERS.' . $this->app->get('JWT.KEY'));
 		} else if($type === 'QUERY') {
 			$verb = $this->app->get('VERB');
-			$jwtToken = $this->app->get($verb . '.' . $this->app->get('JWT.KEY'));
-		} else {
-			throw new Exception('Invalid JWT TYPE.');
+			$jwtHeader = $this->app->get($verb . '.' . $this->app->get('JWT.KEY'));
+		}
+		
+		$startsWith = $this->app->get('JWT.STARTS_WITH');
+		if(!$jwtHeader || (($type === 'HEADER' && $startsWith) && !$this->startsWith($jwtHeader, $startsWith))) {
+			$this->app->call($handler, array($this->app, $args, $alias));
+			return false;
+		}
+		
+		$jwtToken = $jwtHeader;
+		if($startsWith && $type === 'HEADER') {
+			$_ex = explode($startsWith . ' ', $jwtHeader);
+			$jwtToken = isset($_ex[1]) ? $_ex[1] : null;
 		}
 		
 		if(!$jwtToken) {
@@ -128,12 +138,22 @@ class JWTMiddleware extends Prefab {
 		}
 		
 		$payload = [
-            'iss' => $this->app->get('ISSUER'),
-            'sub' => $sub,
-            'iat' => $this->app->get('IAT'),
-            'exp' => time() + $this->app->get('EXP')
-        ];
-        
-        return JWT::encode($payload, $this->app->get('JWT.SECRET'));
+			'iss' => $this->app->get('ISSUER'),
+			'sub' => $sub,
+			'iat' => $this->app->get('IAT'),
+			'exp' => time() + $this->app->get('EXP')
+		];
+		
+		return JWT::encode($payload, $this->app->get('JWT.SECRET'));
+	}
+	
+	private function startsWith($haystack, $needles) {
+		foreach ((array) $needles as $needle) {
+			if ($needle !== '' && substr($haystack, 0, strlen($needle)) === (string) $needle) {
+				return true;
+			}
+		}
+		
+		return false;
 	}
 }
