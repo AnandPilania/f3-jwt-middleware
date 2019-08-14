@@ -127,7 +127,7 @@ class JWTMiddleware extends Prefab {
 		$this->app->set('JWT.token', $jwtToken);
 		$this->app->set('JWT.user', $model->cast());
 		
-		die($model->cast());
+		return true;
 	}
 	
 	public function generate($sub) {
@@ -138,22 +138,22 @@ class JWTMiddleware extends Prefab {
 		}
 		
 		$payload = [
-			'iss' => $this->app->get('ISSUER'),
-			'sub' => $sub,
-			'iat' => $this->app->get('IAT'),
-			'exp' => time() + $this->app->get('EXP')
-		];
-		
-		return JWT::encode($payload, $this->app->get('JWT.SECRET'));
+            		'iss' => $this->app->get('JWT.ISSUER'),
+            		'sub' => $sub,
+            		'iat' => $this->app->get('JWT.IAT'),
+            		'exp' => time() + $this->app->get('JWT.EXP')
+        	];
+        
+        	return JWT::encode($payload, $this->app->get('JWT.SECRET'));
 	}
 	
 	private function startsWith($haystack, $needles) {
-		foreach ((array) $needles as $needle) {
-			if ($needle !== '' && substr($haystack, 0, strlen($needle)) === (string) $needle) {
-				return true;
-			}
-		}
-		
-		return false;
-	}
+        	foreach ((array) $needles as $needle) {
+            		if ($needle !== '' && substr($haystack, 0, strlen($needle)) === (string) $needle) {
+                		return true;
+            		}
+        	}
+
+        	return false;
+    	}
 }
